@@ -11,18 +11,21 @@ import AVFoundation
 
 class playSoundsViewController: UIViewController {
     var audioPlayer:AVAudioPlayer!
+    var receivedAudio:RecordedAudio!
+    
+    var audioEngine:AVAudioEngine!
+    var audioFile:AVAudioFile!
+    
+    
+    
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        // Do any additional setup after loading the view.
-        if var filePath = NSBundle.mainBundle().pathForResource("movie_quote", ofType: "mp3"){
-            var fileUrl = NSURL.fileURLWithPath(filePath)
-             audioPlayer = AVAudioPlayer(contentsOfURL: fileUrl, error: nil)
-             audioPlayer.enableRate = true
-        }else{
-            println("File did not load")
-        }
+        audioPlayer = AVAudioPlayer(contentsOfURL: receivedAudio.filePathUrl, error: nil)
+        audioPlayer.enableRate = true
         
+        audioEngine = AVAudioEngine()
+        audioFile = AVAudioFile(forReading: receivedAudio.filePathUrl, error: nil)
         
     }
 
@@ -31,6 +34,7 @@ class playSoundsViewController: UIViewController {
         // Dispose of any resources that can be recreated.
     }
     
+    // button to play the sound at a rate 1.5 faster than normal
     @IBAction func fastButtonAction(sender: UIButton) {
         audioPlayer.stop()
         audioPlayer.rate = 1.5
@@ -38,24 +42,57 @@ class playSoundsViewController: UIViewController {
         audioPlayer.play()
     }
 
+    
+    // stop the audio playback
     @IBAction func stopButton(sender: UIButton) {
         audioPlayer.stop()
+        audioEngine.stop()
+        audioEngine.reset()
     }
+    
+    // play the sound at half the normal rate
     @IBAction func slowButtonAction(sender: UIButton) {
         
         audioPlayer.stop()
+        audioEngine.reset()
         audioPlayer.rate = 0.5
        
         audioPlayer.play()
     }
-    /*
-    // MARK: - Navigation
 
-    // In a storyboard-based application, you will often want to do a little preparation before navigation
-    override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
-        // Get the new view controller using segue.destinationViewController.
-        // Pass the selected object to the new view controller.
+    // add some darthvader sounds!
+    @IBAction func darthvaderButton(sender: UIButton) {
+        
+        playAudioWithVariablePitch(-1000)
     }
-    */
+    
+    // Make the sound like a chipmunk
+    @IBAction func chipmunkButton(sender: UIButton) {
+        
+        playAudioWithVariablePitch(1000)
+    }
+    
+    func playAudioWithVariablePitch(pitch: Float){
+        // Stop the audio player and engine incase they were already in use
+        audioPlayer.stop()
+        audioEngine.stop()
+        audioEngine.reset()
+        
+        var audioPlayerNode = AVAudioPlayerNode()
+        audioEngine.attachNode(audioPlayerNode)
+        
+        var changePitchEffect = AVAudioUnitTimePitch()
+        changePitchEffect.pitch = pitch
+        
+        audioEngine.attachNode(changePitchEffect)
+        
+        audioEngine.connect(audioPlayerNode, to: changePitchEffect, format:nil)
+        audioEngine.connect(changePitchEffect, to: audioEngine.outputNode, format: nil)
+        
+        audioPlayerNode.scheduleFile(audioFile, atTime: nil, completionHandler: nil)
+        audioEngine.startAndReturnError(nil)
+        
+        audioPlayerNode.play()
+    }
 
 }
